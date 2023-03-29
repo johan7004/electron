@@ -1,0 +1,170 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: auto;
+  padding: 2rem;
+  background: rgb(228, 228, 228);
+}
+
+.header__container {
+  font-weight: 600;
+  text-align: center;
+}
+
+.add-projects__container {
+  text-align: center;
+  margin: 16px auto;
+}
+.add-projects__button {
+  font-size: 18px;
+  font-weight: 600;
+  background: none;
+  padding: 16px;
+  border: 1px solid;
+  border-radius: 5px;
+  background-color: none;
+  transition: background-color 2s;
+  cursor: pointer;
+}
+.add-projects__button:hover {
+  background-color: black;
+  color: white;
+}
+
+.project__main-container {
+  display: flex;
+  width: 100%;
+  justify-content: space-around;
+}
+.project__container {
+  border-radius: 5px;
+  border-color: rgb(78, 78, 78);
+  width: 100%;
+  margin: 16px 0;
+  padding: 16px;
+  background-color: white;
+  box-shadow: -1px 13px 31px 12px rgb(207, 207, 207);
+}
+.project__container .project__header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 16px;
+}
+.project__container .project__header .project__toggle {
+  border: none;
+  margin: 0 16px;
+  padding: 6px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.project__container .project__header .project__toggle--disabled {
+  color: white;
+  cursor: not-allowed !important;
+}
+.project__container .project__header h4 {
+  margin: 0;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.project__container .project__status {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+.project__container .project__status--active {
+  background: none;
+  color: white;
+  background-color: rgb(96, 233, 16);
+  padding: 6px;
+  border: none;
+  border-radius: 5px;
+  width: 75px;
+  text-align: center;
+  align-items: center;
+  cursor: pointer;
+}
+.project__container .project__status--not-active {
+  color: white;
+  background-color: rgb(233, 31, 16);
+  padding: 6px;
+  border-radius: 5px;
+  width: 75px;
+  text-align: center;
+  align-items: center;
+}
+.project__container .project__status .project__update {
+  max-width: 50%;
+  overflow: auto;
+  text-align: center;
+  margin: auto 44px;
+}
+.project__container .project__status .project__remove-button {
+  background: none;
+  color: white;
+  background-color: rgb(233, 31, 16);
+  padding: 6px;
+  border: none;
+  border-radius: 5px;
+  width: 75px;
+  text-align: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.add-project__container {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  width: 100%;
+}
+.add-project__header {
+  padding: 16px;
+}
+.add-project__form {
+  display: flex;
+  flex-direction: column;
+  min-width: 50%;
+  margin: 0 auto;
+}
+.add-project__form button {
+  margin: 12px auto;
+}
+.add-project__form button,
+.add-project__form button a {
+  cursor: pointer;
+}
+.add-project__form-project-name {
+  outline: none;
+  border: none;
+  margin: 16px;
+  padding: 16px;
+  background-color: rgb(228, 228, 228);
+  border-bottom: 1px solid;
+  font-size: 16px;
+  font-weight: 600;
+}
+.add-project__form-file-path {
+  width: 30%;
+  margin: 16px auto;
+  padding: 8px;
+  border-radius: 5px;
+  background-color: none;
+  font-weight: 600;
+  transition: background-color 1.5s;
+  cursor: pointer;
+}
+.add-project__form-file-path:hover {
+  background-color: black;
+  color: white;
+}
+
+.footer__container {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  padding: 16px;
+}
+.footer__container span a {
+  text-decoration: none;
+}/*# sourceMappingURL=index.css.map */

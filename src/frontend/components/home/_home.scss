@@ -1,0 +1,37 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  margin: auto;
+  padding: 2rem;
+  background: $main-window-background;
+}
+.header {
+  &__container {
+    font-weight: 600;
+    text-align: center;
+  }
+}
+
+.add-projects {
+  &__container {
+    text-align: center;
+    margin: 16px auto;
+  }
+  &__button {
+    font-size: 18px;
+    font-weight: 600;
+    background: none;
+    padding: 16px;
+    border: 1px solid;
+    border-radius: 5px;
+    background-color: none;
+    transition: background-color 2s;
+    cursor: pointer;
+    &:hover {
+      background-color: black;
+      color: white;
+    }
+  }
+}
+
+

@@ -1,0 +1,55 @@
+.add-project {
+  &__container {
+    display: flex;
+    flex-direction: column;
+
+    text-align: center;
+    width: 100%;
+  }
+
+  &__header {
+    padding: 16px;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    min-width: 50%;
+    margin: 0 auto;
+
+    button {
+      margin: 12px auto;
+
+      &,
+      a {
+        cursor: pointer;
+      }
+    }
+
+    &-project-name {
+      outline: none;
+      border: none;
+      margin: 16px;
+      padding: 16px;
+      background-color: $main-window-background;
+      border-bottom: 1px solid;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    &-file-path {
+      width: 30%;
+      margin: 16px auto;
+      padding: 8px;
+      border-radius: 5px;
+      background-color: none;
+      font-weight: 600;
+      transition: background-color 1.5s;
+      cursor: pointer;
+
+      &:hover {
+        background-color: black;
+        color: white;
+      }
+    }
+  }
+}
