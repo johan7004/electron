@@ -1,7 +1,7 @@
 {
-  "name": "db-grabber",
-  "productName": "db-grabber",
-  "version": "1.0.0",
+  "name": "db-grab",
+  "productName": "db-grab",
+  "version": "1.0.1",
   "description": "My Electron application description",
   "main": ".webpack/main",
   "scripts": {
@@ -32,24 +32,17 @@
   },
   "dependencies": {
     "@babel/preset-env": "^7.20.2",
+    "copy-webpack-plugin": "^11.0.0",
     "dotenv": "^16.0.3",
-    "electron-dl": "^3.5.0",
+    "dotenv-webpack": "^8.0.1",
     "electron-squirrel-startup": "^1.0.0",
     "electron-winstaller": "^5.1.0",
-    "firebase": "^9.18.0",
-    "firebase-admin": "^11.5.0",
     "mysql": "^2.18.1",
-    "pupeteer": "^0.0.1",
     "puppeteer": "^19.8.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.9.0",
-    "web-vitals": "^3.3.0"
-  },
-  "config": {
-    "forge": {
-      "makers": [],
-      "publishers": []
-    }
+    "web-vitals": "^3.3.0",
+    "webpack-electron-packager": "^1.0.0"
   }
 }

@@ -159,6 +159,11 @@ body {
   color: white;
 }
 
+.automation-log__container-inner {
+  max-width: 500px;
+  max-height: 35vh;
+}
+
 .footer__container {
   display: flex;
   flex-direction: column;

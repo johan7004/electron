@@ -1,11 +1,15 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
-const https = require("https");
+
 const fs = require("fs");
 
 const { spawn } = require("child_process");
 const puppeteer = require("puppeteer");
 const zlib = require("zlib");
+const os = require("os");
+
+// Get the default download directory
+const downloadsFolder = `${os.homedir()}\\Downloads`;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -72,7 +76,7 @@ app.on("activate", () => {
 
 // gets file Path for selected project directory
 
-const getFilePath = async () => {
+async function getFilePath() {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     properties: ["openDirectory"],
   });
@@ -81,13 +85,17 @@ const getFilePath = async () => {
   } else {
     return filePaths[0];
   }
-};
+}
 
+const automationLogger = async (logData) => {
+  const myWindow = BrowserWindow.getAllWindows()[0];
+  myWindow.webContents.send("sendDataToReact", logData);
+};
 // gets json data and send to renderer
 const getStoredProjects = async () => {
   return new Promise((resolve, reject) => {
     try {
-      const data = fs.readFileSync("./src/data/data.json");
+      const data = fs.readFileSync("data.json");
       const projectData = JSON.parse(data);
       resolve(projectData);
     } catch (err) {
@@ -101,10 +109,11 @@ const storeProjectData = async (data) => {
   const jsonData = JSON.stringify(data);
 
   try {
-    fs.writeFileSync("./src/data/data.json", jsonData);
+    fs.writeFileSync("data.json", jsonData);
     return true;
   } catch (err) {
     console.log(err);
+    automationLogger(`Error storing data in json`);
   }
 };
 
@@ -112,58 +121,76 @@ const runCommandPrompt = (path) => {
   return new Promise((resolve, reject) => {
     try {
       const runDocker = () => {
-        const dockerCommand = "docker-compose up -d";
-        const cmd = spawn("cmd", ["/c", `cd ${path} && ${dockerCommand}`]);
-
-        cmd.stdout.on("data", (data) => {
-          console.log(`stdout: ${data}`);
-        });
-
-        cmd.stderr.on("data", (data) => {
-          console.error(`stderr: ${data}`);
-        });
-
-        cmd.on("close", (code) => {
-          console.log(`child process exited with code ${code}`);
-        });
-
-        return true;
-      };
-      const runSqlCommand = () => {
         return new Promise((resolve, reject) => {
-          try {
-            console.log(`running sql command`);
-            const dockerCommand =
-              "cat sqldb.sql | docker exec -i gdm-b2b-figaro2-local-gd-db-1 mysql -u root -pexamplepass local-gd-db";
-            const cmd = spawn("cmd", ["/c", `cd ${path} && ${dockerCommand}`]);
+          const dockerCommand = "docker-compose up -d";
+          const cmd = spawn("cmd", ["/c", `cd ${path} && ${dockerCommand}`]);
+          automationLogger(`Docker Compose Inititated ${dockerCommand}`);
+          cmd.stdout.on("data", (data) => {
+            console.log(`stdout: ${data}`);
+            automationLogger(`Docker-Compose in Progress`);
+          });
 
-            cmd.stdout.on("data", (data) => {
-              console.log(`stdout: ${data}`);
+          cmd.stderr.on("data", (data) => {
+            console.error(`stdout: ${data}`);
+            automationLogger(`stdout: ${data}`);
+          });
+
+          cmd.on("close", (code) => {
+            console.log(`child process exited with code ${code}`);
+            automationLogger(`Docker child process exited with code ${code}`);
+
+            resolve(true, runSqlCommand());
+          });
+          const runSqlCommand = () => {
+            return new Promise((resolve, reject) => {
+              try {
+                console.log(`running sql command`);
+                const dockerCommand =
+                  "cat sqldb.sql | docker exec -i figaro-local-local-gd-db-1 mysql -u root -pexamplepass local-gd-db";
+                const cmd = spawn("cmd", [
+                  "/c",
+                  `cd ${path} && ${dockerCommand}`,
+                ]);
+
+                automationLogger(
+                  `Docker SQL command running -> ${dockerCommand} wait till it finishes`
+                );
+                cmd.stdout.on("data", (data) => {
+                  console.log(`stdout: ${data}`);
+                  automationLogger(`Running SQL: ${data}`);
+                });
+
+                cmd.stderr.on("data", (data) => {
+                  console.error(`stdout: ${data}`);
+                  automationLogger(`stdout: ${data}`);
+                });
+
+                cmd.on("close", (code) => {
+                  console.log(
+                    `child process exited with code ${code} sql command finished`
+                  );
+                  automationLogger(
+                    `child process exited with code ${code} sql command finished you can start using your localhost now`
+                  );
+                });
+
+                resolve(true);
+              } catch (err) {
+                console.log(err);
+                reject(console.log(err));
+                automationLogger(`Error: ${err}`);
+              }
             });
-
-            cmd.stderr.on("data", (data) => {
-              console.error(`stderr: ${data}`);
-            });
-
-            cmd.on("close", (code) => {
-              console.log(
-                `child process exited with code ${code} sql command finished`
-              );
-            });
-
-            resolve(true);
-          } catch (err) {}
+          };
         });
       };
 
       runDocker();
-
-      if (runDocker) {
-        runSqlCommand();
-      }
-
-      resolve(true);
-    } catch {}
+      resolve(true, dateUpdater("after-download", activeProjectPath));
+    } catch (err) {
+      reject(automationLogger(err));
+      automationLogger(`Error in running command prompt`);
+    }
   });
 };
 
@@ -177,6 +204,7 @@ const getDBLink = async () => {
       resolve(dbLink);
     } catch (err) {
       console.error(err);
+      automationLogger(`Error in getting db link`);
       reject(err);
     }
   });
@@ -209,34 +237,39 @@ const getActiveProject = async () => {
 const downloadAndInstallDb = async () => {
   const downloader = (link) => {
     return new Promise((resolve, reject) => {
-      const fileUrl = link;
-      const downloadDir = path.resolve("./");
-      const filename = "sqldb.gz";
+      automationLogger(
+        `puppet operations finished, Node Operations in progress`
+      );
 
-      const file = fs.createWriteStream(path.join(downloadDir, filename));
+      fs.readdir(downloadsFolder, (err, files) => {
+        if (err) {
+          reject(automationLogger(err), console.log(err));
+        }
+        if (files) {
+          files.forEach((downloadfile) => {
+            if (downloadfile.includes(".gz")) {
+              automationLogger(`Download File Found Install Process Begins`);
+              const dbFile = downloadfile;
+              fs.stat(path.join(downloadsFolder, dbFile), (err, stats) => {
+                if (err) console.log(err);
+                const todaysDate = new Date().toDateString();
 
-      https
-        .get(fileUrl, (response) => {
-          response.pipe(file);
-          file.on("finish", () => {
-            file.close();
-            console.log(
-              "File downloaded to:",
-              path.join(downloadDir, filename)
-            );
-            resolve(path.join(downloadDir, filename));
+                if (todaysDate.includes(`${stats.mtime.toDateString()}`)) {
+                  console.log(path.join(downloadsFolder, dbFile));
+                  resolve(path.join(downloadsFolder, dbFile));
+                }
+              });
+            }
           });
-        })
-        .on("error", (err) => {
-          fs.unlinkSync(file);
-          reject(console.error(`Error downloading file: ${err.message}`));
-        });
+        }
+      });
     });
   };
 
   const exportDbToProject = (zippedFilePath, unzippedFilePath) => {
     return new Promise((resolve, reject) => {
       try {
+        automationLogger(`Decompressing and exporting DB to project`);
         const inputPath = zippedFilePath;
         const outputPath = unzippedFilePath;
 
@@ -253,6 +286,7 @@ const downloadAndInstallDb = async () => {
         // Listen for the 'finish'
         outputStream.on("finish", () => {
           console.log("File decompressed and saved to", outputPath);
+          automationLogger(`File decompressed and saved in Project Directory`);
           resolve(true);
         });
       } catch (err) {
@@ -263,25 +297,28 @@ const downloadAndInstallDb = async () => {
 
   return new Promise(async (resolve, reject) => {
     try {
-      const dbDownloadLink = await getDBLink();
+       const dbDownloadLink = await getDBLink();
       const activeProjectPath = await getActiveProject();
 
-      console.log(`from puppet ${dbDownloadLink}`);
-      const downloadResponse = await downloader(dbDownloadLink);
+      console.log(`from puppet ${true}`);
+      const downloadResponse = await downloader(true);
       // 5. decompress the file
-      const exportResponse = await exportDbToProject(
+     if(downloadResponse){
+      exportDbToProject(
         downloadResponse,
         path.join(activeProjectPath, "sqldb.sql")
-      );
-      if (exportResponse) {
-        // 6. run docker
-        // 7. run sql command
-        await runCommandPrompt(activeProjectPath);
-        if (runCommandPrompt) {
-          dateUpdater("after-download", activeProjectPath);
+      ).then((res) => {
+        if (res) {
+          // 6. run docker
+          // 7. run sql command
+          runCommandPrompt(activeProjectPath);
         }
-      }
+      });
+     }
+      
     } catch (err) {
+      reject(err)
+      automationLogger(`download and install error`)
       console.error(err);
     }
   });
@@ -289,7 +326,7 @@ const downloadAndInstallDb = async () => {
 
 //downloadAndInstallDb();
 
-// date checker to launch download and install based on date to avoid multiple installs on restart
+//date checker to launch download and install based on date to avoid multiple installs on restart
 const dateUpdater = async (updateType, updatedPath, storageData) => {
   const afterDownload = async () => {
     const storedProjectsList = await getStoredProjects();
@@ -306,7 +343,13 @@ const dateUpdater = async (updateType, updatedPath, storageData) => {
         console.log(lastUpdateDate);
 
         if (lastUpdateDate === todaysDateAndTime) {
-          resolve(console.log(activeProject, " this project is updated today"));
+          resolve(
+            console.log(
+              activeProject,
+              " this project is updated today",
+              automationLogger(`Project Update Completed and is Updated Today`)
+            )
+          );
         } else {
           const todaysDateAndTime = new Date().toISOString().substring(0, 10);
           const updatedProjectData = storedProjectsList.map((project) => {
@@ -328,7 +371,7 @@ const dateUpdater = async (updateType, updatedPath, storageData) => {
     });
   };
 
-  const beforeDownload = async (data) => {
+  const beforeDownload = async (data, manualUpdate) => {
     const storedProjectsList = data;
 
     const activeProject = storedProjectsList.filter(
@@ -341,14 +384,20 @@ const dateUpdater = async (updateType, updatedPath, storageData) => {
         const lastUpdateDate = project.updateDate;
         console.log(project);
 
-        if (lastUpdateDate === todaysDateAndTime) {
+        if (lastUpdateDate === todaysDateAndTime && !manualUpdate) {
           resolve(
-            " this project is updated today do not need to download and install"
+            automationLogger(
+              ` This project is updated today do not need to download and install manual update => ${manualUpdate}`
+            ),
+            " This project is updated today do not need to download and install"
           );
         } else {
           resolve(
             downloadAndInstallDb(),
-            " this project is not updated today download and install in progress"
+            automationLogger(
+              `This project is not updated today download and install in progress and manual update => ${manualUpdate}`
+            ),
+            " This project is not updated today download and install in progress"
           );
         }
       });
@@ -360,7 +409,14 @@ const dateUpdater = async (updateType, updatedPath, storageData) => {
     return new Promise((resolve) => resolve(update));
   }
   if (updateType === "before-download") {
-    const update = await beforeDownload(storageData);
+    console.log(`dateUpdater invoked`);
+    const update = await beforeDownload(storageData, false);
+    return new Promise((resolve, reject) => {
+      resolve(update);
+    });
+  }
+  if (updateType === "manual-download") {
+    const update = await beforeDownload(storageData, true);
     return new Promise((resolve, reject) => {
       resolve(update);
     });
@@ -372,23 +428,35 @@ const launchPuppet = async () => {
     try {
       const logPrinter = (log) => {
         console.log(log);
+        //automationLogger(log)
       };
 
-      const browser = await puppeteer.launch();
+      // const browser = await puppeteer.launch();
+
+      const browser = await puppeteer.launch({
+        headless: false,
+        defaultViewport: null,
+        args: ["--window-size = 2160,3840"],
+      });
       const page = await browser.newPage();
+      await page.setViewport({ width: 2560, height: 1293 });
       page.setDefaultTimeout(0);
+      page.setDefaultNavigationTimeout(0);
       await page.exposeFunction("logPrinter", logPrinter);
+      await page.exposeFunction("automationLogger", automationLogger);
 
       // Navigate to webpage
       await page.goto(process.env.PANTHEON_DASHBOARDLINK);
       console.log(`dashboard login`);
+      automationLogger(`dashboard Login`);
       await page.waitForSelector(".c-login-button");
       await page.click(".c-login-button");
       console.log(`login with email button clicked`);
+      automationLogger(`login with email button clicked`);
       await page.waitForNetworkIdle();
       await page.waitForSelector(".auth0-lock-input");
       await page.waitForNetworkIdle();
-      console.log(`authentication begins.....`);
+      automationLogger(`authentication begins.....`);
 
       await page.type('input[name="email"]', process.env.PANTHEON_USERNAME, {
         delay: 900,
@@ -404,72 +472,96 @@ const launchPuppet = async () => {
 
       await page.waitForSelector('button[name="submit"]');
       await page.click('button[name="submit"]');
-      console.log(`credentials submitted`);
+      automationLogger(`credentials submitted`);
+      await page.waitForNetworkIdle();
       await page.waitForSelector('a[href*="/sites"]');
       await page.click('a[href*="/sites"]');
-      console.log(`pantheon believes that I am a human`);
+      automationLogger(`pantheon believes that I am a human`);
       await page.waitForNetworkIdle();
       await page.waitForSelector('input[placeholder*="Search by Site Name"]');
-      console.log(`waiting for links to load`);
+      automationLogger(`waiting for links to load`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
-      console.log(`waited for 5 seconds for links to load`);
+      await page.waitForNetworkIdle();
+      automationLogger(`waited for 5 seconds for links to load`);
       console.log("Page loaded completely");
       await page.waitForSelector("span.site-list-status-container");
-      console.log(`before clicking the repo link`);
-      const links = await page.waitForSelector("text/B2B GDM Figaro1");
-      links.click();
-      console.log(`after clicking repo link`);
+      automationLogger(`before clicking the repo link`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
-      console.log(`wait before clicking multidev`);
+      await page.waitForSelector("td[role*=cell] a");
+      await page.click("td[role*=cell] a");
+      automationLogger(`after clicking repo link`);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      automationLogger(`wait before clicking multidev`);
       await page.waitForSelector('a[href*="#multidev"]');
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       await page.click('a[href*="#multidev"]');
 
-      console.log(`multidev instance clicked`);
+      automationLogger(`multidev instance clicked`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
-      console.log(`waited for 3 seconds`);
+      console.log(`waited for 5 seconds`);
       // await page.waitForSelector(".branches-overview-wrapper");
-      console.log(`multidev Loaded`);
+      automationLogger(`multidev Loaded`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
       console.log(`waited for 5 seconds`);
-      await page.waitForSelector("text/autodbhost");
-      await page.click("text/autodbhost");
-      console.log(`host branch clicked`);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      console.log(`waited for 5 seconds`);
+      // await page.waitForSelector("text/autodbhost",{timeout:600000});
+      // await page.click("text/autodbhost");
       await page.evaluate(() => {
-        const backupLogButton = document.querySelector(
-          'a[data-name="backups"]'
-        );
-        backupLogButton.click();
-        logPrinter(`backup Button from menu clicked Clicked`);
-      });
-      await page.waitForSelector("text/Backup Log");
+        const hostBranch = document.querySelectorAll(`.name a`);
 
-      console.log(`backup log clicked`);
-      await page.evaluate(() => {
-        let downloadLink = document.querySelector(
-          ".backups table.table tbody tr:first-child .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download"
-        );
-
-        async function checkBackupLink() {
-          while (!downloadLink) {
-            await new Promise((resolve) => setTimeout(resolve, 10000));
-            logPrinter(`check again for backup`);
-            downloadLink = document.querySelector(
-              ".backups table.table tbody tr:first-child .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download"
-            );
+        hostBranch.forEach((elem) => {
+          if (elem.innerText === "autodbhost") {
+            elem.click();
           }
-          return;
-        }
-        checkBackupLink();
-        logPrinter(`Check Completed`);
+        });
       });
+      automationLogger(`host branch clicked`);
+      automationLogger(`wait for 5 seconds`);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      // await page.evaluate(() => {
+      //   const backupLogButton = document.querySelector(
+      //     'a[data-name="backups"]'
+      //   );
+      //   backupLogButton.click();
+      //   logPrinter(`backup Button from menu clicked Clicked`);
+      // });
+      await page.waitForSelector(' a[data-name="backups"]');
+      await page.click(' a[data-name="backups"]');
+      // await page.waitForSelector("text/Backup Log");
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      automationLogger(`backup log clicked`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // await page.evaluate(() => {
+      //   const fakeClick = document.querySelector("body");
 
+      //   fakeClick.click();
+      //   logPrinter(`fake click done`);
+      // });
+      // automationLogger(`pop ups cleared`);
+      // await page.evaluate(() => {
+      //   let downloadLink = document.querySelector(
+      //     ".backups table.table tbody tr:first-child .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download"
+      //   );
+
+      //   async function checkBackupLink() {
+      //     while (!downloadLink) {
+      //       await new Promise((resolve) => setTimeout(resolve, 10000));
+      //       logPrinter(`check again for backup`);
+      //       downloadLink = document.querySelector(
+      //         ".backups table.table tbody tr:first-child .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download"
+      //       );
+      //     }
+      //     return;
+      //   }
+      //   checkBackupLink();
+      //   logPrinter(`Check Completed`);
+      // });
+      await new Promise((resolve) => setTimeout(resolve, 10000));
       await page.waitForSelector(
-        ".backups table.table tbody tr:first-child .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download"
+        ".backups .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download",
+        { timeout: 600000 }
       );
       await page.click(
-        ".backups table.table tbody tr:first-child .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download"
+        ".backups .download-td.database-download .archive-download .btn.btn-default.btn-xs.js-download"
       );
       await page.waitForSelector(
         ".popover.bound.bottom.in .popover-inner .popover-content input"
@@ -477,19 +569,24 @@ const launchPuppet = async () => {
 
       const downloadStorageLink = await page.evaluate(() => {
         const linkInput = document.querySelector(
-          ".popover.bound.bottom.in .popover-inner .popover-content input"
+          ".popover.bound.bottom.in .popover-inner .popover-content .btn.btn-default.btn-sm.pull-right"
         );
 
-        // logPrinter(linkInput.value);
+        automationLogger(`Found Download Button`);
+        linkInput.click();
+        automationLogger(`Download Button Clicked, Download Initiated`);
 
-        return linkInput.value;
+        return true;
       });
-      console.log(downloadStorageLink);
-
+      // Wait for the download to finish
+      await new Promise((resolve) => setTimeout(resolve, 420000));
+      automationLogger(`Downloads checked and verified`);
       resolve(downloadStorageLink);
-      await browser.close();
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      //await browser.close();
     } catch (err) {
       console.error(err);
+      automationLogger(err.message);
       reject(err);
     }
   });

@@ -9,8 +9,8 @@ module.exports = {
           authors: "Johan",
 
           name: "GD-DB-Grabber",
-          setupExe: "GD-DB-Grabber-1.0.exe",
-          setupMsi: "GD-DB-Grabber-1.0.msi"
+          setupExe: "GD-DB-1.1.exe",
+          setupMsi: "GD-DB-1.1.msi"
 
         },
       },

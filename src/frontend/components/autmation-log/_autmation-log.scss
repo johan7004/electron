@@ -1,0 +1,9 @@
+.automation-log {
+  &__container-inner {
+    max-width: 500px;
+    max-height: 35vh;
+    //overflow-y: scroll;
+   // scroll-behavior: smooth;
+   // scroll-margin-bottom: 50px; /* reserve space at the bottom */
+  }
+}

@@ -11,6 +11,7 @@ const WINDOW_API = {
 
   dateUpdater: async (updateType) =>
     ipcRenderer.invoke("dateUpdater", updateType),
+    sendDataToReact: async(callBack) =>ipcRenderer.on('sendDataToReact', (callBack))
 };
 
 contextBridge.exposeInMainWorld("nodeFunctions", WINDOW_API);

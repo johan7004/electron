@@ -48,23 +48,42 @@ function ProjectsList() {
     setProjectData(newData);
   };
 
-  const getData = async () => {
-    const dbData = await window.nodeFunctions.getStoredProjects();
-    console.log(dbData);
-    setProjectData(dbData);
-    const downloaderTest = await window.nodeFunctions.dateUpdater([
-      {
-        updateType: "before-download",
-        updatePath: "no-path",
-        completeProjectData: dbData,
-      },
-    ]);
-    setDownloaderInfo(downloaderTest);
+  const getData = async (updateMode) => {
+    if (updateMode === "before-download") {
+      const dbData = await window.nodeFunctions.getStoredProjects();
+      console.log(dbData);
+      setProjectData(dbData);
+      const downloaderTest = await window.nodeFunctions.dateUpdater([
+        {
+          updateType: "before-download",
+          updatePath: "no-path",
+          completeProjectData: dbData,
+        },
+      ]);
+      setDownloaderInfo(downloaderTest);
+    }
+    if(updateMode === "manual-download"){
+      const dbData = await window.nodeFunctions.getStoredProjects();
+      console.log(dbData);
+      setProjectData(dbData);
+      const downloaderTest = await window.nodeFunctions.dateUpdater([
+        {
+          updateType: "manual-download",
+          updatePath: "no-path",
+          completeProjectData: dbData,
+        },
+      ]);
+      setDownloaderInfo(downloaderTest);
+    }
   };
 
   useEffect(() => {
-    getData();
+    getData('before-download');
   }, []);
+
+  const manualUpdateRunner = async () => {
+    getData('manual-download')
+  };
 
   useEffect(() => {
     updateData();
@@ -87,18 +106,28 @@ function ProjectsList() {
                 <div className="project__header">
                   <h4>{projectName}</h4>
 
-                  {!projectState.length ? (
-                    <button
-                      type="button"
-                      onClick={(e) => setActiveProject(e, i)}
-                      className="project__toggle"
-                    >
-                      Set As Active
-                    </button>
+                  {!projectState.length && !projectState ? (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={(e) => setActiveProject(e, i)}
+                        className="project__toggle"
+                      >
+                        Set As Active
+                      </button>
+                    </div>
                   ) : (
-                    <button className="project__toggle project__toggle--disabled">
-                      Set As Active
-                    </button>
+                    <div>
+                      <button className="project__toggle project__toggle--disabled">
+                        Set As Active
+                      </button>
+                      <button
+                        className="project__toggle"
+                        onClick={manualUpdateRunner}
+                      >
+                        Run Manually
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div className="project__status">
@@ -129,10 +158,7 @@ function ProjectsList() {
         )}
       </div>
       <div className="automation-log__container">
-        <AutomationLog
-          currentRunningStatus={true}
-          currentProcess={downloaderInfo}
-        />
+        <AutomationLog />
       </div>
     </div>
   );
